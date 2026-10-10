@@ -1,8 +1,22 @@
 import Foundation
 
-struct Coordinate: Hashable, Sendable {
+struct Coordinate: Codable, Hashable, Sendable {
     let latitude: Double
     let longitude: Double
+}
+
+/// A named location picked through city search.
+struct Place: Codable, Hashable, Identifiable, Sendable {
+    let id: Int
+    let name: String
+    let region: String?
+    let country: String?
+    let coordinate: Coordinate
+
+    /// e.g. "Austin, Texas, United States"
+    var displayName: String {
+        [name, region, country].compactMap { $0 }.joined(separator: ", ")
+    }
 }
 
 /// Everything the UI needs for one location. Temperatures are Celsius and

@@ -12,6 +12,11 @@ protocol LocationProviding {
     @MainActor func placeName(for coordinate: Coordinate) async -> String?
 }
 
+/// City-name lookup, used when location access is denied.
+protocol PlaceSearching: Sendable {
+    func search(_ query: String) async throws -> [Place]
+}
+
 enum WeatherServiceError: LocalizedError {
     case badResponse(statusCode: Int)
 

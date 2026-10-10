@@ -34,6 +34,7 @@ DarkWeatherTests/
 ```
 
 - **Data:** `OpenMeteoWeatherService` calls [Open-Meteo](https://open-meteo.com), which is free and needs no API key. To switch to WeatherKit, add another `WeatherService` implementation and change the wiring in `DarkWeatherApp.swift`. WeatherKit requires a paid developer account, the WeatherKit capability, and an Apple Weather attribution in the UI.
+- **Location:** GPS first. If the user denies location access, the app shows a city search instead, using Open-Meteo's free geocoding API. The picked city is saved in `UserDefaults` and used instead of GPS until the user taps `[ use gps ]`. Tapping the `$ weather <city>` line opens the search at any time.
 - **Units:** models store °C and km/h. `Format` converts them to the user's locale, so US users see °F and mph.
 - **Theme:** colors and the monospaced font live in `Theme/Theme.swift`. Table columns are built by padding strings, so they only line up in a monospaced font. ASCII art is in `WeatherCondition.asciiArt`; each piece must be 5 lines of 13 columns, and a test checks this.
 - **Previews and tests** use `PreviewWeatherService` and `PreviewLocationProvider` (`Services/PreviewData.swift`).

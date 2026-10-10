@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     let viewModel: WeatherViewModel
+    @State private var isSearching = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -10,14 +11,22 @@ struct ContentView: View {
             switch viewModel.state {
             case .idle, .loading:
                 LoadingView()
+            case .needsPlace(let reason):
+                CitySearchView(viewModel: viewModel, reason: reason)
             case .failed(let message):
                 ErrorView(message: message) {
                     Task { await viewModel.refresh() }
                 }
             case .loaded(let report):
-                ForecastView(report: report, placeName: viewModel.placeName)
-                    .refreshable { await viewModel.refresh() }
+                ForecastView(report: report, placeName: viewModel.placeName) {
+                    isSearching = true
+                }
+                .refreshable { await viewModel.refresh() }
             }
+        }
+        .sheet(isPresented: $isSearching) {
+            CitySearchView(viewModel: viewModel) { isSearching = false }
+                .presentationDragIndicator(.visible)
         }
         .foregroundStyle(Theme.text)
         .font(Theme.mono(.callout))
@@ -28,11 +37,16 @@ struct ContentView: View {
 private struct ForecastView: View {
     let report: WeatherReport
     let placeName: String?
+    let changePlace: () -> Void
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                PromptLine(command: "weather \(commandArgument)")
+                Button(action: changePlace) {
+                    PromptLine(command: "weather \(commandArgument)")
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Search for a different city")
                 CurrentConditionsView(current: report.current, today: report.daily.first)
                 HourlyForecastView(hours: report.hourly)
                 DailyForecastView(days: report.daily)
@@ -90,7 +104,8 @@ private struct ErrorView: View {
 #Preview("Loaded") {
     ContentView(viewModel: WeatherViewModel(
         weatherService: PreviewWeatherService(),
-        locationProvider: PreviewLocationProvider()
+        locationProvider: PreviewLocationProvider(),
+        placeSearch: PreviewPlaceSearch()
     ))
     .preferredColorScheme(.dark)
 }
@@ -98,7 +113,8 @@ private struct ErrorView: View {
 #Preview("Location denied") {
     ContentView(viewModel: WeatherViewModel(
         weatherService: PreviewWeatherService(),
-        locationProvider: PreviewLocationProvider(result: .failure(LocationError.denied))
+        locationProvider: PreviewLocationProvider(result: .failure(LocationError.denied)),
+        placeSearch: PreviewPlaceSearch()
     ))
     .preferredColorScheme(.dark)
 }

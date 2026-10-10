@@ -4,7 +4,8 @@ import SwiftUI
 struct DarkWeatherApp: App {
     @State private var viewModel = WeatherViewModel(
         weatherService: OpenMeteoWeatherService(),
-        locationProvider: LocationManager()
+        locationProvider: LocationManager(),
+        placeSearch: OpenMeteoGeocodingService()
     )
 
     var body: some Scene {

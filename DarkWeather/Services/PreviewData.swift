@@ -3,6 +3,7 @@ import Foundation
 /// Canned data for SwiftUI previews and unit tests.
 enum PreviewData {
     static let coordinate = Coordinate(latitude: 30.2672, longitude: -97.7431)
+    static let place = Place(id: 4671654, name: "Austin", region: "Texas", country: "United States", coordinate: coordinate)
 
     static func report(now: Date = .now) -> WeatherReport {
         let calendar = Calendar.current
@@ -55,4 +56,10 @@ struct PreviewLocationProvider: LocationProviding {
 
     func currentLocation() async throws -> Coordinate { try result.get() }
     func placeName(for coordinate: Coordinate) async -> String? { name }
+}
+
+struct PreviewPlaceSearch: PlaceSearching {
+    var results: [Place] = [PreviewData.place]
+
+    func search(_ query: String) async throws -> [Place] { results }
 }
