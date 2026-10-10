@@ -9,7 +9,7 @@ struct HourlyForecastView: View {
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(Array(hours.prefix(12).enumerated()), id: \.element.id) { index, hour in
                     HStack(spacing: 0) {
-                        Text((index == 0 ? "now" : hour.date.formatted(.dateTime.hour())).rightPadded(to: 7))
+                        Text(timeLabel(hour, isFirst: index == 0))
                             .foregroundStyle(Theme.dim)
                         Text(Format.temperature(hour.temperature).leftPadded(to: 4))
                         Text("  " + hour.condition.description.lowercased().rightPadded(to: 14))
@@ -21,6 +21,11 @@ struct HourlyForecastView: View {
                 }
             }
         }
+    }
+
+    private func timeLabel(_ hour: HourlyForecast, isFirst: Bool) -> String {
+        let label: String = isFirst ? "now" : hour.date.formatted(.dateTime.hour())
+        return label.rightPadded(to: 7)
     }
 
     private func precipitation(_ hour: HourlyForecast) -> String {

@@ -15,12 +15,12 @@ struct DailyForecastView: View {
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(Array(days.enumerated()), id: \.element.id) { index, day in
                     HStack(spacing: 0) {
-                        Text((index == 0 ? "today" : day.date.formatted(.dateTime.weekday(.abbreviated)).lowercased()).rightPadded(to: 6))
+                        Text(dayLabel(day, isFirst: index == 0))
                             .foregroundStyle(Theme.dim)
                         Text(day.condition.shortLabel.rightPadded(to: 7))
                         Text(Format.temperature(day.low).leftPadded(to: 4))
                             .foregroundStyle(Theme.cool)
-                        Text(" " + Format.rangeBar(low: day.low, high: day.high, in: range) + " ")
+                        Text(bar(day))
                             .foregroundStyle(Theme.dim)
                             .accessibilityHidden(true)
                         Text(Format.temperature(day.high).leftPadded(to: 4))
@@ -31,6 +31,15 @@ struct DailyForecastView: View {
                 }
             }
         }
+    }
+
+    private func dayLabel(_ day: DailyForecast, isFirst: Bool) -> String {
+        let label: String = isFirst ? "today" : day.date.formatted(.dateTime.weekday(.abbreviated)).lowercased()
+        return label.rightPadded(to: 6)
+    }
+
+    private func bar(_ day: DailyForecast) -> String {
+        " \(Format.rangeBar(low: day.low, high: day.high, in: range)) "
     }
 }
 

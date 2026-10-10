@@ -15,21 +15,26 @@ enum PreviewData {
                 date: now, temperature: 22, apparentTemperature: 21,
                 humidity: 0.54, windSpeed: 12, condition: .partlyCloudy, isDaylight: true
             ),
-            hourly: (0..<24).map { i in
-                HourlyForecast(
+            hourly: (0..<24).map { (i: Int) -> HourlyForecast in
+                let temperature: Double = 22.0 - Double(i % 12) * 0.6
+                let chance: Double? = i % 4 == 3 ? 0.4 : nil
+                return HourlyForecast(
                     date: calendar.date(byAdding: .hour, value: i, to: hour)!,
-                    temperature: 22 - Double(i % 12) * 0.6,
+                    temperature: temperature,
                     condition: conditions[i % conditions.count],
-                    precipitationChance: i % 4 == 3 ? 0.4 : nil
+                    precipitationChance: chance
                 )
             },
-            daily: (0..<10).map { i in
-                DailyForecast(
+            daily: (0..<10).map { (i: Int) -> DailyForecast in
+                let high: Double = 24.0 + Double(i % 3)
+                let low: Double = 13.0 + Double(i % 2)
+                let chance: Double = i % 3 == 0 ? 0.3 : 0.0
+                return DailyForecast(
                     date: calendar.date(byAdding: .day, value: i, to: day)!,
-                    high: 24 + Double(i % 3),
-                    low: 13 + Double(i % 2),
+                    high: high,
+                    low: low,
                     condition: conditions[i % conditions.count],
-                    precipitationChance: i % 3 == 0 ? 0.3 : 0
+                    precipitationChance: chance
                 )
             }
         )
