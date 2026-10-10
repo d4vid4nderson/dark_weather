@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct DarkWeatherApp: App {
-    @State private var viewModel = WeatherViewModel(
+    @State private var viewModel = TerminalViewModel(
         weatherService: OpenMeteoWeatherService(),
         locationProvider: LocationManager(),
         placeSearch: OpenMeteoGeocodingService()
@@ -10,7 +10,7 @@ struct DarkWeatherApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(viewModel: viewModel)
+            TerminalView(viewModel: viewModel)
                 .preferredColorScheme(.dark)
         }
     }

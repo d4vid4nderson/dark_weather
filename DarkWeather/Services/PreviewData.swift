@@ -3,7 +3,7 @@ import Foundation
 /// Canned data for SwiftUI previews and unit tests.
 enum PreviewData {
     static let coordinate = Coordinate(latitude: 30.2672, longitude: -97.7431)
-    static let place = Place(id: 4671654, name: "Austin", region: "Texas", country: "United States", coordinate: coordinate)
+    static let place = Place(id: 4671654, name: "Austin", region: "Texas", country: "United States", coordinate: coordinate, countryCode: "US")
 
     static func report(now: Date = .now) -> WeatherReport {
         let calendar = Calendar.current

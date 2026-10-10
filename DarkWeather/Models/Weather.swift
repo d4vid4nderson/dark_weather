@@ -5,17 +5,27 @@ struct Coordinate: Codable, Hashable, Sendable {
     let longitude: Double
 }
 
-/// A named location picked through city search.
+/// A named location found through city search.
 struct Place: Codable, Hashable, Identifiable, Sendable {
     let id: Int
     let name: String
     let region: String?
     let country: String?
     let coordinate: Coordinate
+    /// ISO 3166-1 alpha-2, e.g. "US".
+    var countryCode: String? = nil
 
     /// e.g. "Austin, Texas, United States"
     var displayName: String {
         [name, region, country].compactMap { $0 }.joined(separator: ", ")
+    }
+
+    /// e.g. "Austin, TX" in the US, "Oslo, Norway" elsewhere.
+    var shortName: String {
+        if countryCode == "US", let region, let abbreviation = USState.abbreviation(for: region) {
+            return "\(name), \(abbreviation)"
+        }
+        return [name, country].compactMap { $0 }.joined(separator: ", ")
     }
 }
 

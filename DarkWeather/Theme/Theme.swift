@@ -16,23 +16,16 @@ enum Theme {
     }
 }
 
-/// `── title ─────────` header followed by the section's output.
-struct TerminalSection<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Text("── \(title)")
-                    .foregroundStyle(Theme.prompt)
-                Rectangle()
-                    .fill(Theme.rule)
-                    .frame(height: 1)
-            }
-            .font(Theme.mono(.footnote, weight: .semibold))
-            .accessibilityAddTraits(.isHeader)
-            content
+extension TerminalLine.Style {
+    var color: Color {
+        switch self {
+        case .plain: Theme.text
+        case .dim: Theme.dim
+        case .prompt: Theme.prompt
+        case .warm: Theme.warm
+        case .cool: Theme.cool
+        case .error: Theme.error
+        case .rule: Theme.rule
         }
     }
 }
@@ -44,25 +37,10 @@ struct BlinkingCursor: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 0.6)) { context in
             let tick = Int(context.date.timeIntervalSinceReferenceDate / 0.6)
-            Text("█")
+            Text(verbatim: "█")
                 .foregroundStyle(Theme.prompt)
                 .opacity(reduceMotion || tick.isMultiple(of: 2) ? 1 : 0)
         }
         .accessibilityHidden(true)
-    }
-}
-
-/// `$ command` line.
-struct PromptLine: View {
-    let command: String
-    var showsCursor = false
-
-    var body: some View {
-        HStack(spacing: 0) {
-            Text("$ ").foregroundStyle(Theme.prompt)
-            Text(command)
-            if showsCursor { BlinkingCursor() }
-        }
-        .font(Theme.mono(.callout))
     }
 }
