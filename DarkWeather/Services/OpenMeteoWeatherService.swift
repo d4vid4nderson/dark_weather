@@ -38,6 +38,16 @@ struct OpenMeteoResponse: Decodable {
         let windSpeed10m: Double
         let weatherCode: Int
         let isDay: Int
+
+        enum CodingKeys: String, CodingKey {
+            case time
+            case temperature2m = "temperature_2m"
+            case apparentTemperature = "apparent_temperature"
+            case relativeHumidity2m = "relative_humidity_2m"
+            case windSpeed10m = "wind_speed_10m"
+            case weatherCode = "weather_code"
+            case isDay = "is_day"
+        }
     }
 
     struct Hourly: Decodable {
@@ -45,6 +55,13 @@ struct OpenMeteoResponse: Decodable {
         let temperature2m: [Double]
         let weatherCode: [Int]
         let precipitationProbability: [Double?]
+
+        enum CodingKeys: String, CodingKey {
+            case time
+            case temperature2m = "temperature_2m"
+            case weatherCode = "weather_code"
+            case precipitationProbability = "precipitation_probability"
+        }
     }
 
     struct Daily: Decodable {
@@ -53,16 +70,24 @@ struct OpenMeteoResponse: Decodable {
         let temperature2mMax: [Double]
         let temperature2mMin: [Double]
         let precipitationProbabilityMax: [Double?]
+
+        enum CodingKeys: String, CodingKey {
+            case time
+            case weatherCode = "weather_code"
+            case temperature2mMax = "temperature_2m_max"
+            case temperature2mMin = "temperature_2m_min"
+            case precipitationProbabilityMax = "precipitation_probability_max"
+        }
     }
 
     let current: Current
     let hourly: Hourly
     let daily: Daily
 
+    /// Explicit CodingKeys rather than `.convertFromSnakeCase`, which turns
+    /// `temperature_2m` into `temperature2M` and fails to match.
     static func decode(_ data: Data) throws -> OpenMeteoResponse {
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return try decoder.decode(OpenMeteoResponse.self, from: data)
+        try JSONDecoder().decode(OpenMeteoResponse.self, from: data)
     }
 
     /// Builds the domain model, keeping the next 24 hours of hourly data.
