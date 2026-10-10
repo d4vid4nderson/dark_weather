@@ -29,6 +29,18 @@ enum Format {
         fraction.formatted(.percent.precision(.fractionLength(0)))
     }
 
+    /// Terminal-style age: "just now", "5m ago", "2h ago", "yesterday", "3d ago".
+    static func ago(_ date: Date, now: Date = .now) -> String {
+        let seconds = max(0, now.timeIntervalSince(date))
+        switch seconds {
+        case ..<60: return "just now"
+        case ..<3600: return "\(Int(seconds / 60))m ago"
+        case ..<86_400: return "\(Int(seconds / 3600))h ago"
+        case ..<172_800: return "yesterday"
+        default: return "\(Int(seconds / 86_400))d ago"
+        }
+    }
+
     /// Text bar marking where `low...high` falls within `range`, e.g. `░░███████░`.
     static func rangeBar(low: Double, high: Double, in range: ClosedRange<Double>, width: Int = 10) -> String {
         guard width > 0 else { return "" }

@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The whole app: scrollback, a `$ weather ` prompt, and suggestion chips
-/// above the keyboard.
+/// The whole app: scrollback, `▸ recent` and a `$ weather ` prompt, and
+/// suggestion chips above the keyboard.
 struct TerminalView: View {
     let viewModel: TerminalViewModel
 
@@ -12,16 +12,27 @@ struct TerminalView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: "dark weather \(Self.version)")
-                    Text(verbatim: "type a city, or tap a suggestion. try 'help'.")
+                    Text(verbatim: "\(AppInfo.name) \(AppInfo.version)")
+                    Text(verbatim: "type a city, state. try 'help'.")
                 }
                 .foregroundStyle(Theme.dim)
 
                 ForEach(viewModel.entries) { entry in
-                    EntryView(entry: entry) { viewModel.markAnimated(entry.id) }
+                    EntryView(
+                        entry: entry,
+                        onAnimated: { viewModel.markAnimated(entry.id) },
+                        select: { place in run { await viewModel.run(place) } },
+                        clearScreen: { viewModel.clearScreen() },
+                        forgetAll: { viewModel.forgetAll() }
+                    )
                 }
 
-                inputLine
+                VStack(alignment: .leading, spacing: 0) {
+                    if !viewModel.recents.isEmpty {
+                        recentButton
+                    }
+                    inputLine
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
@@ -41,6 +52,23 @@ struct TerminalView: View {
             guard !Task.isCancelled else { return }
             await viewModel.updateSuggestions(for: input)
         }
+    }
+
+    /// `▸ recent (3)`: lists recent cities when tapped.
+    private var recentButton: some View {
+        Button {
+            run { viewModel.showRecents() }
+        } label: {
+            HStack(spacing: 0) {
+                Text(verbatim: "▸ ").foregroundStyle(Theme.prompt)
+                Text(verbatim: "recent ")
+                Text(verbatim: "(\(viewModel.recents.count))").foregroundStyle(Theme.dim)
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Recent cities, \(viewModel.recents.count)")
     }
 
     /// `$ weather <input>█`, with a hidden text field doing the typing.
@@ -68,38 +96,42 @@ struct TerminalView: View {
         .onTapGesture { isInputFocused = true }
     }
 
+    /// City matches while typing; otherwise just `[ here ]`.
     private var chips: [SuggestionBar.Chip] {
         let isTyping = !input.trimmingCharacters(in: .whitespaces).isEmpty
         if isTyping, !viewModel.suggestions.isEmpty {
             return viewModel.suggestions.map { SuggestionBar.Chip.place($0) }
         }
-        let recents: [SuggestionBar.Chip] = viewModel.recents.map { SuggestionBar.Chip.place($0) }
-        return [SuggestionBar.Chip.here] + recents
+        return [SuggestionBar.Chip.here]
     }
 
     private func submit() {
         let text = input
-        input = ""
-        isInputFocused = false
-        Task { await viewModel.submit(text) }
+        run { await viewModel.submit(text) }
     }
 
     private func select(_ chip: SuggestionBar.Chip) {
-        input = ""
-        isInputFocused = false
         switch chip {
-        case .here: Task { await viewModel.runCurrentLocation() }
-        case .place(let place): Task { await viewModel.run(place) }
+        case .here: run { await viewModel.runCurrentLocation() }
+        case .place(let place): run { await viewModel.run(place) }
         }
     }
 
-    private static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+    /// Clears the prompt and hides the keyboard so the output has room.
+    private func run(_ action: @escaping @MainActor () async -> Void) {
+        input = ""
+        isInputFocused = false
+        Task { await action() }
+    }
 }
 
 /// One command and its output.
 private struct EntryView: View {
     let entry: TerminalViewModel.Entry
     let onAnimated: () -> Void
+    let select: (Place) -> Void
+    let clearScreen: () -> Void
+    let forgetAll: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -108,16 +140,17 @@ private struct EntryView: View {
                 Text(verbatim: entry.command)
             }
 
-            if let lines = entry.lines {
-                if let summary = entry.summary {
-                    TypewriterView(lines: lines, animate: !entry.hasAnimated, onFinish: onAnimated)
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(summary)
-                } else {
-                    TypewriterView(lines: lines, animate: !entry.hasAnimated, onFinish: onAnimated)
-                }
-            } else {
+            switch entry.content {
+            case .running:
                 Spinner()
+            case .lines(let lines, let summary?):
+                TypewriterView(lines: lines, animate: !entry.hasAnimated, onFinish: onAnimated)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(summary)
+            case .lines(let lines, nil):
+                TypewriterView(lines: lines, animate: !entry.hasAnimated, onFinish: onAnimated)
+            case .recents(let recents):
+                RecentListView(recents: recents, select: select, clearScreen: clearScreen, forgetAll: forgetAll)
             }
         }
     }

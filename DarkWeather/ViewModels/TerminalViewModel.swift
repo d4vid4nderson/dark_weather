@@ -6,15 +6,35 @@ import Observation
 @Observable
 final class TerminalViewModel {
     struct Entry: Identifiable, Equatable {
+        enum Content: Equatable {
+            case running
+            /// `summary` is spoken by VoiceOver in place of the lines, when set.
+            case lines([TerminalLine], summary: String?)
+            /// `weather --recent`: tappable rows, as they stood when printed.
+            case recents([RecentPlace])
+        }
+
         let id = UUID()
         /// Echoed after the `$ ` prompt.
         let command: String
-        /// nil while the lookup is still running.
-        var lines: [TerminalLine]?
-        /// Spoken by VoiceOver in place of the lines, when set.
-        var summary: String?
+        var content: Content = .running
         /// Only the newest output types itself out, and only once.
         var hasAnimated = false
+
+        var lines: [TerminalLine]? {
+            if case .lines(let lines, _) = content { lines } else { nil }
+        }
+
+        var summary: String? {
+            if case .lines(_, let summary) = content { summary } else { nil }
+        }
+    }
+
+    /// A city looked up before, and when.
+    struct RecentPlace: Codable, Equatable, Identifiable {
+        let place: Place
+        let lastChecked: Date
+        var id: Place.ID { place.id }
     }
 
     static let maxEntries = 20
@@ -22,7 +42,7 @@ final class TerminalViewModel {
 
     private(set) var entries: [Entry] = []
     /// Most recent first.
-    private(set) var recents: [Place] = []
+    private(set) var recents: [RecentPlace] = []
     /// City matches for what's being typed.
     private(set) var suggestions: [Place] = []
 
@@ -30,20 +50,23 @@ final class TerminalViewModel {
     private let locationProvider: LocationProviding
     private let placeSearch: PlaceSearching
     private let defaults: UserDefaults
-    private static let recentsKey = "recentPlaces"
+    private let now: () -> Date
+    private static let recentsKey = "recentLookups"
 
     init(
         weatherService: WeatherService,
         locationProvider: LocationProviding,
         placeSearch: PlaceSearching,
-        defaults: UserDefaults = .standard
+        defaults: UserDefaults = .standard,
+        now: @escaping () -> Date = Date.init
     ) {
         self.weatherService = weatherService
         self.locationProvider = locationProvider
         self.placeSearch = placeSearch
         self.defaults = defaults
+        self.now = now
         if let data = defaults.data(forKey: Self.recentsKey),
-           let saved = try? JSONDecoder().decode([Place].self, from: data) {
+           let saved = try? JSONDecoder().decode([RecentPlace].self, from: data) {
             recents = saved
         }
     }
@@ -56,7 +79,9 @@ final class TerminalViewModel {
 
         switch text.lowercased() {
         case "clear":
-            entries.removeAll()
+            clearScreen()
+        case "recent", "--recent":
+            showRecents()
         case "help":
             let id = begin("weather \(text)")
             finish(id, lines: Self.helpLines)
@@ -87,6 +112,28 @@ final class TerminalViewModel {
         } catch {
             fail(id, error.localizedDescription)
         }
+    }
+
+    /// Prints the recent cities as a tappable list.
+    func showRecents() {
+        suggestions = []
+        let id = begin("weather --recent")
+        if recents.isEmpty {
+            finish(id, lines: [TerminalLine("no recent cities. type a city, state.", .dim)])
+        } else {
+            setContent(id, .recents(recents))
+        }
+    }
+
+    func clearScreen() {
+        entries.removeAll()
+    }
+
+    /// Deletes the saved cities and clears the screen.
+    func forgetAll() {
+        recents = []
+        defaults.removeObject(forKey: Self.recentsKey)
+        clearScreen()
     }
 
     func updateSuggestions(for query: String) async {
@@ -145,9 +192,12 @@ final class TerminalViewModel {
     }
 
     private func finish(_ id: Entry.ID, lines: [TerminalLine], summary: String? = nil) {
+        setContent(id, .lines(lines, summary: summary))
+    }
+
+    private func setContent(_ id: Entry.ID, _ content: Entry.Content) {
         guard let index = entries.firstIndex(where: { $0.id == id }) else { return }
-        entries[index].lines = lines
-        entries[index].summary = summary
+        entries[index].content = content
     }
 
     private func fail(_ id: Entry.ID, _ message: String) {
@@ -156,7 +206,7 @@ final class TerminalViewModel {
 
     private func remember(_ place: Place) {
         recents.removeAll { $0.id == place.id }
-        recents.insert(place, at: 0)
+        recents.insert(RecentPlace(place: place, lastChecked: now()), at: 0)
         recents = Array(recents.prefix(Self.maxRecents))
         defaults.set(try? JSONEncoder().encode(recents), forKey: Self.recentsKey)
     }
@@ -166,6 +216,7 @@ final class TerminalViewModel {
         .blank,
         TerminalLine([.init(text: "  austin, tx  ", style: .plain), .init(text: "a city", style: .dim)]),
         TerminalLine([.init(text: "  here        ", style: .plain), .init(text: "use gps", style: .dim)]),
+        TerminalLine([.init(text: "  recent      ", style: .plain), .init(text: "cities you've checked", style: .dim)]),
         TerminalLine([.init(text: "  clear       ", style: .plain), .init(text: "clear the screen", style: .dim)]),
         TerminalLine([.init(text: "  help        ", style: .plain), .init(text: "show this", style: .dim)]),
     ]

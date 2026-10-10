@@ -14,6 +14,7 @@ private final class SpyWeatherService: WeatherService, @unchecked Sendable {
 @MainActor
 final class TerminalViewModelTests: XCTestCase {
     private var defaults: UserDefaults!
+    private let fixedNow = Date(timeIntervalSince1970: 1_760_000_000)
     private let oslo = Place(id: 3143244, name: "Oslo", region: "Oslo", country: "Norway",
                              coordinate: Coordinate(latitude: 59.91, longitude: 10.75), countryCode: "NO")
 
@@ -27,7 +28,7 @@ final class TerminalViewModelTests: XCTestCase {
         location: LocationProviding = PreviewLocationProvider(),
         search: PlaceSearching = PreviewPlaceSearch()
     ) -> TerminalViewModel {
-        TerminalViewModel(weatherService: weather, locationProvider: location, placeSearch: search, defaults: defaults)
+        TerminalViewModel(weatherService: weather, locationProvider: location, placeSearch: search, defaults: defaults, now: { [fixedNow] in fixedNow })
     }
 
     private func text(_ entry: TerminalViewModel.Entry) -> String {
@@ -51,9 +52,9 @@ final class TerminalViewModelTests: XCTestCase {
         XCTAssertNotNil(entry.summary)
         XCTAssertFalse(entry.hasAnimated)
         XCTAssertEqual(spy.requested, [PreviewData.coordinate])
-        XCTAssertEqual(viewModel.recents, [PreviewData.place])
+        XCTAssertEqual(viewModel.recents, [.init(place: PreviewData.place, lastChecked: fixedNow)])
         // Recents survive a relaunch.
-        XCTAssertEqual(makeViewModel().recents, [PreviewData.place])
+        XCTAssertEqual(makeViewModel().recents.map(\.place), [PreviewData.place])
     }
 
     func testUnknownCityPrintsError() async {
@@ -75,7 +76,7 @@ final class TerminalViewModelTests: XCTestCase {
 
         XCTAssertEqual(spy.requested.last, oslo.coordinate)
         XCTAssertEqual(viewModel.entries.last?.command, "weather oslo, norway")
-        XCTAssertEqual(viewModel.recents, [oslo, PreviewData.place])
+        XCTAssertEqual(viewModel.recents.map(\.place), [oslo, PreviewData.place])
     }
 
     func testRecentsAreCapped() async {
@@ -84,7 +85,7 @@ final class TerminalViewModelTests: XCTestCase {
             await viewModel.run(Place(id: id, name: "City \(id)", region: nil, country: nil, coordinate: PreviewData.coordinate))
         }
         XCTAssertEqual(viewModel.recents.count, TerminalViewModel.maxRecents)
-        XCTAssertEqual(viewModel.recents.first?.id, TerminalViewModel.maxRecents + 2)
+        XCTAssertEqual(viewModel.recents.first?.place.id, TerminalViewModel.maxRecents + 2)
     }
 
     func testHereUsesGPS() async {
@@ -137,6 +138,41 @@ final class TerminalViewModelTests: XCTestCase {
         viewModel.markAnimated(viewModel.entries[0].id)
 
         XCTAssertTrue(viewModel.entries[0].hasAnimated)
+    }
+
+    func testRecentCommandListsCities() async {
+        let viewModel = makeViewModel()
+        await viewModel.run(oslo)
+        await viewModel.run(PreviewData.place)
+
+        await viewModel.submit("recent")
+
+        XCTAssertEqual(viewModel.entries.last?.command, "weather --recent")
+        XCTAssertEqual(viewModel.entries.last?.content, .recents(viewModel.recents))
+        XCTAssertEqual(viewModel.recents.map(\.place), [PreviewData.place, oslo])
+    }
+
+    func testRecentWithNothingSavedSaysSo() {
+        let viewModel = makeViewModel()
+
+        viewModel.showRecents()
+
+        XCTAssertTrue(text(viewModel.entries[0]).hasPrefix("no recent cities"))
+    }
+
+    func testClearScreenKeepsRecentsButForgetAllDeletesThem() async {
+        let viewModel = makeViewModel()
+        await viewModel.run(oslo)
+
+        viewModel.clearScreen()
+        XCTAssertEqual(viewModel.entries, [])
+        XCTAssertEqual(viewModel.recents.count, 1)
+
+        await viewModel.run(oslo)
+        viewModel.forgetAll()
+        XCTAssertEqual(viewModel.entries, [])
+        XCTAssertEqual(viewModel.recents, [])
+        XCTAssertEqual(makeViewModel().recents, [])
     }
 
     func testSuggestionsNeedTwoCharacters() async {
