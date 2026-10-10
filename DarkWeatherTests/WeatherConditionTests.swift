@@ -14,8 +14,21 @@ final class WeatherConditionTests: XCTestCase {
         XCTAssertEqual(WeatherCondition(wmoCode: 1234), .unknown)
     }
 
-    func testClearSkyUsesNightSymbolAfterDark() {
-        XCTAssertEqual(WeatherCondition.clear.symbolName(isDaylight: true), "sun.max.fill")
-        XCTAssertEqual(WeatherCondition.clear.symbolName(isDaylight: false), "moon.stars.fill")
+    func testAsciiArtIsFiveLinesOfThirteenColumns() {
+        for condition in WeatherCondition.allCases {
+            for isDaylight in [true, false] {
+                let art = condition.asciiArt(isDaylight: isDaylight)
+                XCTAssertEqual(art.count, 5, "\(condition)")
+                XCTAssertTrue(art.allSatisfy { $0.count == 13 }, "\(condition)")
+            }
+        }
+    }
+
+    func testClearSkyShowsMoonAfterDark() {
+        XCTAssertNotEqual(WeatherCondition.clear.asciiArt(isDaylight: true), WeatherCondition.clear.asciiArt(isDaylight: false))
+    }
+
+    func testShortLabelsFitTableColumn() {
+        XCTAssertTrue(WeatherCondition.allCases.allSatisfy { $0.shortLabel.count <= 6 })
     }
 }

@@ -43,18 +43,97 @@ enum WeatherCondition: String, Sendable, CaseIterable {
         }
     }
 
-    func symbolName(isDaylight: Bool = true) -> String {
+    /// Lowercase label for table rows, at most 6 characters.
+    var shortLabel: String {
         switch self {
-        case .clear: isDaylight ? "sun.max.fill" : "moon.stars.fill"
-        case .partlyCloudy: isDaylight ? "cloud.sun.fill" : "cloud.moon.fill"
-        case .cloudy: "cloud.fill"
-        case .fog: "cloud.fog.fill"
-        case .drizzle: "cloud.drizzle.fill"
-        case .rain: "cloud.rain.fill"
-        case .freezingRain: "cloud.sleet.fill"
-        case .snow: "cloud.snow.fill"
-        case .thunderstorm: "cloud.bolt.rain.fill"
-        case .unknown: "questionmark.circle"
+        case .clear: "clear"
+        case .partlyCloudy: "ptcldy"
+        case .cloudy: "cloudy"
+        case .fog: "fog"
+        case .drizzle: "drizzl"
+        case .rain: "rain"
+        case .freezingRain: "frzrn"
+        case .snow: "snow"
+        case .thunderstorm: "storm"
+        case .unknown: "--"
+        }
+    }
+
+    /// Five-line, 13-column ASCII art for the current conditions panel.
+    func asciiArt(isDaylight: Bool = true) -> [String] {
+        let cloud = [
+            #"     .--.    "#,
+            #"  .-(    ).  "#,
+            #" (___.__)__) "#,
+        ]
+        switch self {
+        case .clear where isDaylight:
+            return [
+                #"   \  |  /   "#,
+                #"    .---.    "#,
+                #" --(     )-- "#,
+                #"    '---'    "#,
+                #"   /  |  \   "#,
+            ]
+        case .clear:
+            return [
+                #"     .--.    "#,
+                #"    /  .'    "#,
+                #"   |  |      "#,
+                #"    \  '.    "#,
+                #"     '--'    "#,
+            ]
+        case .partlyCloudy where isDaylight:
+            return [
+                #"   \  |  /   "#,
+                #"  -( ).--.   "#,
+                #"  .-(    ).  "#,
+                #" (___.__)__) "#,
+                #"             "#,
+            ]
+        case .partlyCloudy, .cloudy:
+            return ["             "] + cloud + ["             "]
+        case .fog:
+            return [
+                #"             "#,
+                #" _ - _ - _ - "#,
+                #"  _ - _ - _  "#,
+                #" _ - _ - _ - "#,
+                #"             "#,
+            ]
+        case .drizzle:
+            return cloud + [
+                #"   '  '  '   "#,
+                #"  '  '  '    "#,
+            ]
+        case .rain:
+            return cloud + [
+                #"  / / / / /  "#,
+                #" / / / / /   "#,
+            ]
+        case .freezingRain:
+            return cloud + [
+                #"  * / * / *  "#,
+                #" / * / * /   "#,
+            ]
+        case .snow:
+            return cloud + [
+                #"   *  *  *   "#,
+                #"  *  *  *    "#,
+            ]
+        case .thunderstorm:
+            return cloud + [
+                #"  /_ / /_ /  "#,
+                #"   /  / /    "#,
+            ]
+        case .unknown:
+            return [
+                #"             "#,
+                #"    .---.    "#,
+                #"   (  ?  )   "#,
+                #"    '---'    "#,
+                #"             "#,
+            ]
         }
     }
 }

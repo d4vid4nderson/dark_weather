@@ -1,33 +1,34 @@
 import SwiftUI
 
+/// `key = value` readout of the remaining current conditions.
 struct DetailsView: View {
     let current: CurrentConditions
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible())], spacing: 16) {
-            DetailTile(title: "Feels Like", systemImage: "thermometer.medium", value: Format.temperature(current.apparentTemperature))
-            DetailTile(title: "Humidity", systemImage: "humidity", value: Format.percent(current.humidity))
-            DetailTile(title: "Wind", systemImage: "wind", value: Format.windSpeed(current.windSpeed))
+        TerminalSection(title: "details") {
+            VStack(alignment: .leading, spacing: 2) {
+                row("feels_like", Format.temperature(current.apparentTemperature))
+                row("humidity", Format.percent(current.humidity))
+                row("wind", Format.windSpeed(current.windSpeed))
+            }
         }
     }
-}
 
-private struct DetailTile: View {
-    let title: String
-    let systemImage: String
-    let value: String
-
-    var body: some View {
-        Card(title: title, systemImage: systemImage) {
+    private func row(_ key: String, _ value: String) -> some View {
+        HStack(spacing: 0) {
+            Text(key.rightPadded(to: 11)).foregroundStyle(Theme.dim)
+            Text("= ").foregroundStyle(Theme.rule)
             Text(value)
-                .font(.title.weight(.medium))
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
     }
 }
 
 #Preview {
     DetailsView(current: PreviewData.report().current)
         .padding()
-        .background(.black)
-        .foregroundStyle(.white)
+        .background(Theme.background)
+        .foregroundStyle(Theme.text)
+        .font(Theme.mono(.callout))
 }

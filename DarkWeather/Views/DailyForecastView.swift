@@ -1,65 +1,43 @@
 import SwiftUI
 
+/// One row per day: weekday, condition, low, range bar, high.
 struct DailyForecastView: View {
     let days: [DailyForecast]
 
     private var range: ClosedRange<Double> {
         let low = days.map(\.low).min() ?? 0
-        let high = days.map(\.high).max() ?? 1
-        return low...max(high, low + 1)
+        let high = days.map(\.high).max() ?? 0
+        return low...max(high, low)
     }
 
     var body: some View {
-        Card(title: "\(days.count)-Day Forecast", systemImage: "calendar") {
-            VStack(spacing: 0) {
+        TerminalSection(title: "\(days.count)-day") {
+            VStack(alignment: .leading, spacing: 2) {
                 ForEach(Array(days.enumerated()), id: \.element.id) { index, day in
-                    if index > 0 { Divider().overlay(Theme.cardStroke) }
-                    HStack(spacing: 12) {
-                        Text(index == 0 ? "Today" : day.date.formatted(.dateTime.weekday(.abbreviated)))
-                            .frame(width: 52, alignment: .leading)
-                        Image(systemName: day.condition.symbolName())
-                            .symbolRenderingMode(.multicolor)
-                            .frame(width: 28)
-                        Text(Format.temperature(day.low))
-                            .foregroundStyle(Theme.secondaryText)
-                            .frame(width: 40, alignment: .trailing)
-                        TemperatureRangeBar(day: day, range: range)
-                        Text(Format.temperature(day.high))
-                            .frame(width: 40, alignment: .trailing)
+                    HStack(spacing: 0) {
+                        Text((index == 0 ? "today" : day.date.formatted(.dateTime.weekday(.abbreviated)).lowercased()).rightPadded(to: 6))
+                            .foregroundStyle(Theme.dim)
+                        Text(day.condition.shortLabel.rightPadded(to: 7))
+                        Text(Format.temperature(day.low).leftPadded(to: 4))
+                            .foregroundStyle(Theme.cool)
+                        Text(" " + Format.rangeBar(low: day.low, high: day.high, in: range) + " ")
+                            .foregroundStyle(Theme.dim)
+                            .accessibilityHidden(true)
+                        Text(Format.temperature(day.high).leftPadded(to: 4))
+                            .foregroundStyle(Theme.warm)
                     }
-                    .font(.body.weight(.medium))
-                    .padding(.vertical, 10)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                 }
             }
         }
     }
 }
 
-/// Capsule showing where a day's low/high sits within the whole forecast's range.
-private struct TemperatureRangeBar: View {
-    let day: DailyForecast
-    let range: ClosedRange<Double>
-
-    var body: some View {
-        GeometryReader { proxy in
-            let span = range.upperBound - range.lowerBound
-            let start = (day.low - range.lowerBound) / span * proxy.size.width
-            let width = max((day.high - day.low) / span * proxy.size.width, 4)
-            ZStack(alignment: .leading) {
-                Capsule().fill(Theme.cardStroke)
-                Capsule()
-                    .fill(LinearGradient(colors: [.cyan, .yellow, .orange], startPoint: .leading, endPoint: .trailing))
-                    .frame(width: width)
-                    .offset(x: start)
-            }
-        }
-        .frame(height: 4)
-    }
-}
-
 #Preview {
     DailyForecastView(days: PreviewData.report().daily)
         .padding()
-        .background(.black)
-        .foregroundStyle(.white)
+        .background(Theme.background)
+        .foregroundStyle(Theme.text)
+        .font(Theme.mono(.callout))
 }

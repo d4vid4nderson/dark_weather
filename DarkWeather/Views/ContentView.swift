@@ -4,14 +4,12 @@ struct ContentView: View {
     let viewModel: WeatherViewModel
 
     var body: some View {
-        ZStack {
-            Theme.background(for: report?.current.condition, isDaylight: report?.current.isDaylight ?? false)
-                .ignoresSafeArea()
+        ZStack(alignment: .topLeading) {
+            Theme.background.ignoresSafeArea()
 
             switch viewModel.state {
             case .idle, .loading:
-                ProgressView()
-                    .tint(Theme.primaryText)
+                LoadingView()
             case .failed(let message):
                 ErrorView(message: message) {
                     Task { await viewModel.refresh() }
@@ -21,12 +19,9 @@ struct ContentView: View {
                     .refreshable { await viewModel.refresh() }
             }
         }
-        .foregroundStyle(Theme.primaryText)
+        .foregroundStyle(Theme.text)
+        .font(Theme.mono(.callout))
         .task { await viewModel.refresh() }
-    }
-
-    private var report: WeatherReport? {
-        if case .loaded(let report) = viewModel.state { report } else { nil }
     }
 }
 
@@ -36,17 +31,41 @@ private struct ForecastView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
-                CurrentConditionsView(current: report.current, today: report.daily.first, placeName: placeName)
-                    .padding(.vertical, 32)
+            VStack(alignment: .leading, spacing: 24) {
+                PromptLine(command: "weather \(commandArgument)")
+                CurrentConditionsView(current: report.current, today: report.daily.first)
                 HourlyForecastView(hours: report.hourly)
                 DailyForecastView(days: report.daily)
                 DetailsView(current: report.current)
+                PromptLine(command: "", showsCursor: true)
             }
-            .padding(.horizontal)
-            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
         }
         .scrollIndicators(.hidden)
+    }
+
+    private var commandArgument: String {
+        guard let placeName else { return "--here" }
+        return placeName.lowercased().replacingOccurrences(of: " ", with: "-")
+    }
+}
+
+private struct LoadingView: View {
+    private let frames = ["|", "/", "-", "\\"]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            PromptLine(command: "weather --here")
+            TimelineView(.periodic(from: .now, by: 0.12)) { context in
+                let frame = Int(context.date.timeIntervalSinceReferenceDate / 0.12) % frames.count
+                Text("\(frames[frame]) fetching forecast...")
+                    .foregroundStyle(Theme.dim)
+            }
+        }
+        .padding()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Loading forecast")
     }
 }
 
@@ -55,14 +74,16 @@ private struct ErrorView: View {
     let retry: () -> Void
 
     var body: some View {
-        ContentUnavailableView {
-            Label("No Forecast", systemImage: "cloud.slash")
-        } description: {
-            Text(message)
-        } actions: {
-            Button("Try Again", action: retry)
-                .buttonStyle(.bordered)
+        VStack(alignment: .leading, spacing: 8) {
+            PromptLine(command: "weather --here")
+            Text("error: \(message)")
+                .foregroundStyle(Theme.error)
+            Button("[ retry ]", action: retry)
+                .foregroundStyle(Theme.prompt)
+                .padding(.top, 8)
+            PromptLine(command: "", showsCursor: true)
         }
+        .padding()
     }
 }
 

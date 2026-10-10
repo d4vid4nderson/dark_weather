@@ -28,4 +28,31 @@ enum Format {
     static func percent(_ fraction: Double) -> String {
         fraction.formatted(.percent.precision(.fractionLength(0)))
     }
+
+    /// Text bar marking where `low...high` falls within `range`, e.g. `░░███████░`.
+    static func rangeBar(low: Double, high: Double, in range: ClosedRange<Double>, width: Int = 10) -> String {
+        guard width > 0 else { return "" }
+        let span = range.upperBound - range.lowerBound
+        guard span > 0 else { return String(repeating: "█", count: width) }
+
+        func column(_ value: Double) -> Int {
+            let position = ((value - range.lowerBound) / span * Double(width - 1)).rounded()
+            return min(max(Int(position), 0), width - 1)
+        }
+        let start = column(low)
+        let end = max(column(high), start)
+        return String((0..<width).map { (start...end).contains($0) ? "█" : "░" })
+    }
+}
+
+extension String {
+    /// Right-aligns within `width` columns (monospaced layouts).
+    func leftPadded(to width: Int) -> String {
+        count >= width ? self : String(repeating: " ", count: width - count) + self
+    }
+
+    /// Left-aligns within `width` columns (monospaced layouts).
+    func rightPadded(to width: Int) -> String {
+        count >= width ? self : self + String(repeating: " ", count: width - count)
+    }
 }
