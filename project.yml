@@ -1,0 +1,53 @@
+name: DarkWeather
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  DarkWeather:
+    type: application
+    platform: iOS
+    sources:
+      - DarkWeather
+    info:
+      path: DarkWeather/Info.plist
+      properties:
+        CFBundleDisplayName: Dark Weather
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIUserInterfaceStyle: Dark
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSLocationWhenInUseUsageDescription: Dark Weather uses your location to show the forecast where you are.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.darkweather
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1"
+  DarkWeatherTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - DarkWeatherTests
+    dependencies:
+      - target: DarkWeather
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.darkweather.tests
+schemes:
+  DarkWeather:
+    build:
+      targets:
+        DarkWeather: all
+    test:
+      targets:
+        - DarkWeatherTests
